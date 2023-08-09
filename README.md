@@ -4,3 +4,4 @@ Set of generic docker-compose setups to help testing and local development:
 - `Kafka`: kafka cluster with schema registry and kafka ui
 - `opentelemetry`: complete otel stack with a otel-collector, prometheus, jeager and grafana
 - `opentelemetry-minimal`: simple otel stack with just a collector, prometheus and zipkin
+- `postgres-kafka-debezium`: postgres database with a Debezium Change Data Capture dumping data to kafka (with schema reg and ui)
