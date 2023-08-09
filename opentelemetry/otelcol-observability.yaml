@@ -1,0 +1,15 @@
+exporters:
+  otlp:
+    endpoint: "jaeger:4317"
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: "otelcol:9464"
+    resource_to_telemetry_conversion:
+      enabled: true
+    enable_open_metrics: true
+
+service:
+  pipelines:
+    metrics:
+      exporters: [prometheus, logging]

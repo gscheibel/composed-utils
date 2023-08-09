@@ -1,0 +1,73 @@
+version: '3.9'
+services:
+  grafana:
+    image: grafana/grafana-oss:10.0.3
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana-datasource.yaml/:/etc/grafana/provisioning/datasources/defaults.yaml
+  otelcol:
+    image: otel/opentelemetry-collector-contrib:0.82.0
+    container_name: otelcol
+    deploy:
+      resources:
+        limits:
+          memory: 125M
+    restart: unless-stopped
+    command: [ "--config=/etc/otelcol-config.yaml", "--config=/etc/otelcol-observability.yaml"]
+    volumes:
+      - ./otelcol-config.yaml:/etc/otelcol-config.yaml
+      - ./otelcol-observability.yaml:/etc/otelcol-observability.yaml
+    ports:
+      - "4317:4317"          # OTLP over gRPC receiver
+      - "4318:4318"     # OTLP over HTTP receiver
+      - "9464"          # Prometheus exporter
+      - "8888"          # metrics endpoint
+    depends_on:
+      - jaeger
+  prometheus:
+    image: quay.io/prometheus/prometheus:v2.43.0
+    container_name: prometheus
+    command:
+      - --web.console.templates=/etc/prometheus/consoles
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --storage.tsdb.retention.time=1h
+      - --config.file=/etc/prometheus/prometheus-config.yaml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      - --web.route-prefix=/
+      - --enable-feature=exemplar-storage
+    volumes:
+      - ./prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    ports:
+      - "9090:9090"
+  jaeger:
+    image: jaegertracing/all-in-one
+    container_name: jaeger
+    command:
+      - "--memory.max-traces"
+      - "10000"
+      - "--query.base-path"
+      - "/jaeger/ui"
+      - "--prometheus.server-url"
+      - "http://prometheus:9090"
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    restart: unless-stopped
+    ports:
+      - "16686"                    # Jaeger UI
+      - "4317"                           # OTLP gRPC default port
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - METRICS_STORAGE_TYPE=prometheus
+
+networks:
+  default:
+    name: opentelemetry-demo
+    driver: bridge
