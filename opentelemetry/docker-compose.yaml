@@ -1,18 +1,17 @@
-version: '3.9'
 services:
   grafana:
-    image: grafana/grafana-oss:10.0.3
+    image: grafana/grafana:13.0.3
     ports:
       - 3000:3000
     volumes:
-      - ./grafana-datasource.yaml/:/etc/grafana/provisioning/datasources/defaults.yaml
+      - ./grafana-datasource.yaml:/etc/grafana/provisioning/datasources/defaults.yaml
   otelcol:
-    image: otel/opentelemetry-collector-contrib:0.82.0
+    image: otel/opentelemetry-collector-contrib:0.155.0
     container_name: otelcol
     deploy:
       resources:
         limits:
-          memory: 125M
+          memory: 256M
     restart: unless-stopped
     command: [ "--config=/etc/otelcol-config.yaml", "--config=/etc/otelcol-observability.yaml"]
     volumes:
@@ -26,7 +25,7 @@ services:
     depends_on:
       - jaeger
   prometheus:
-    image: quay.io/prometheus/prometheus:v2.43.0
+    image: quay.io/prometheus/prometheus:v3.12.0
     container_name: prometheus
     command:
       - --web.console.templates=/etc/prometheus/consoles
@@ -46,26 +45,20 @@ services:
     ports:
       - "9090:9090"
   jaeger:
-    image: jaegertracing/all-in-one
+    image: jaegertracing/jaeger:2.19.0
     container_name: jaeger
     command:
-      - "--memory.max-traces"
-      - "10000"
-      - "--query.base-path"
-      - "/jaeger/ui"
-      - "--prometheus.server-url"
-      - "http://prometheus:9090"
+      - "--config=/etc/jaeger/config.yaml"
+    volumes:
+      - ./jaeger-config.yaml:/etc/jaeger/config.yaml
     deploy:
       resources:
         limits:
-          memory: 300M
+          memory: 400M
     restart: unless-stopped
     ports:
       - "16686"                    # Jaeger UI
-      - "4317"                           # OTLP gRPC default port
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
-      - METRICS_STORAGE_TYPE=prometheus
+      - "4317"                     # OTLP gRPC receiver
 
 networks:
   default:

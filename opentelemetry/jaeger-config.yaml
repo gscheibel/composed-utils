@@ -1,0 +1,56 @@
+# Jaeger v2 all-in-one configuration.
+# Replaces the v1 command flags / environment variables used previously.
+# Receives traces over OTLP from the collector and serves the query UI;
+# SPM (Monitor tab) data is read from Prometheus, where the collector's
+# spanmetrics connector publishes call/latency series.
+
+service:
+  extensions: [jaeger_storage, jaeger_query]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [jaeger_storage_exporter]
+  telemetry:
+    resource:
+      service.name: jaeger
+    metrics:
+      level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+
+extensions:
+  jaeger_query:
+    storage:
+      traces: trace_storage
+      metrics: metric_storage
+  jaeger_storage:
+    backends:
+      trace_storage:
+        memory:
+          max_traces: 10000
+    metric_backends:
+      metric_storage:
+        prometheus:
+          endpoint: http://prometheus:9090
+          normalize_calls: true
+          normalize_duration: true
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+
+exporters:
+  jaeger_storage_exporter:
+    trace_storage: trace_storage

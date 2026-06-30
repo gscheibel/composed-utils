@@ -5,14 +5,24 @@ receivers:
   otlp:
     protocols:
       grpc:
+        endpoint: "0.0.0.0:4317"
       http:
+        endpoint: "0.0.0.0:4318"
         cors:
           allowed_origins:
             - "http://*"
             - "https://*"
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: host-app
+          scrape_interval: 5s
+          metrics_path: /metrics
+          static_configs:
+            - targets: ["host.docker.internal:9321"]
 
 exporters:
-  logging:
+  debug:
 
 processors:
   batch:
@@ -31,12 +41,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging, spanmetrics]
+      exporters: [debug, spanmetrics, otlp]
     metrics:
-      receivers: [otlp, spanmetrics]
+      receivers: [otlp, spanmetrics, prometheus]
       processors: [filter, batch]
-      exporters: [logging]
+      exporters: [debug]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging]
+      exporters: [debug]
